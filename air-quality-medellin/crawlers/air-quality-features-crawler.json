@@ -1,0 +1,16 @@
+{
+  "Name": "air-quality-features-crawler",
+  "Role": "LabRole",
+  "DatabaseName": "air_quality_db",
+  "Targets": {
+    "S3Targets": [
+      {
+        "Path": "s3://air-quality-medellin-2026/curated/features/"
+      }
+    ]
+  },
+  "RecrawlPolicy": {
+    "RecrawlBehavior": "CRAWL_EVERYTHING"
+  },
+  "Schedule": "On demand"
+}

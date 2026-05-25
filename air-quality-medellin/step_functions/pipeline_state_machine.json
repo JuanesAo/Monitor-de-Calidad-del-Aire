@@ -1,0 +1,26 @@
+{
+  "Comment": "State Machine for Air Quality Data Processing",
+  "StartAt": "IngestWeatherData",
+  "States": {
+    "IngestWeatherData": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:lambda_ingestor",
+      "Next": "TransformRawData"
+    },
+    "TransformRawData": {
+      "Type": "Task",
+      "Resource": "arn:aws:glue:REGION:ACCOUNT_ID:job/job1_raw_to_curated",
+      "Next": "BuildFeatures"
+    },
+    "BuildFeatures": {
+      "Type": "Task",
+      "Resource": "arn:aws:glue:REGION:ACCOUNT_ID:job/job2_build_features",
+      "Next": "TrainModel"
+    },
+    "TrainModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:glue:REGION:ACCOUNT_ID:job/job3_ml_training",
+      "End": true
+    }
+  }
+}

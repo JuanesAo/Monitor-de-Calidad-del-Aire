@@ -1,0 +1,10 @@
+{
+  "ScheduleExpression": "rate(1 hour)",
+  "Targets": [
+    {
+      "Arn": "arn:aws:states:region:account-id:stateMachine:pipeline_state_machine",
+      "Id": "TargetStateMachine",
+      "Input": "{}"
+    }
+  ]
+}
