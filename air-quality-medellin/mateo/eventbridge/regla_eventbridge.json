@@ -1,10 +1,18 @@
 {
-  "ScheduleExpression": "rate(1 hour)",
-  "Targets": [
-    {
-      "Arn": "arn:aws:states:region:account-id:stateMachine:pipeline_state_machine",
-      "Id": "TargetStateMachine",
-      "Input": "{}"
+  "Name": "air-quality-pipeline-trigger",
+  "Description": "Dispara el pipeline de calidad del aire cada 2 horas. Invoca la state machine 'air-quality-pipeline' que orquesta los 3 Glue Jobs (raw-to-curated, build-features, ml-training) en secuencia.",
+  "ScheduleExpression": "rate(2 hours)",
+  "ScheduleExpressionTimezone": "America/Bogota",
+  "State": "ENABLED",
+  "FlexibleTimeWindow": {
+    "Mode": "OFF"
+  },
+  "Target": {
+    "Arn": "arn:aws:states:us-east-1:501105294149:stateMachine:air-quality-pipeline",
+    "RoleArn": "arn:aws:iam::501105294149:role/LabRole",
+    "Input": "{}",
+    "RetryPolicy": {
+      "MaximumRetryAttempts": 0
     }
-  ]
+  }
 }
