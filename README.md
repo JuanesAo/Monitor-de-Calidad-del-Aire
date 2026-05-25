@@ -10,7 +10,7 @@
 | ---------------- | -------------------------------------------------- | ------------- |
 | **Nico**   | Infraestructura AWS + Ingesta                      | ✅ Completado |
 | **Juanes** | Pipeline Glue + Features + ML                      | ✅ Completado |
-| **Mateo**  | Dashboard QuickSight + Alertas SNS + Orquestación | 🔲 Pendiente  |
+| **Mateo**  | Dashboard QuickSight + Alertas SNS + Orquestación | ✅ Pendiente  |
 
 ---
 
@@ -293,79 +293,126 @@ LIMIT 10;
 ---
 
 # 📋 Pendientes para Mateo
-
-> Todo lo siguiente está listo para ser conectado. Las predicciones ya están en `curated/predictions/` particionadas por `station_id`.
-
-## Pendiente 1 — SNS Topic + Lambda de alertas
-
-**Crear SNS topic:**
-
+ 
+> Estado actualizado: lo entregable por Mateo está **completado** salvo el diagrama de arquitectura y la presentación final.
+ 
+---
+ 
+## ✅ Pendiente 1 — SNS Topic + Lambda de alertas
+ 
+**SNS Topic creado:**
 ```
-Nombre: air-quality-alerts
-Suscripciones: email del equipo
+Nombre:        air-quality-alerts
+Display name:  Calidad del Aire Medellín
+Tipo:          Standard
+Región:        us-east-1
+Suscripciones: 3 emails del equipo (Nicolás, Juan Esteban, Mateo) — confirmadas
 ```
-
-**Lambda `lambda-air-quality-alertas`:**
-
-- Lee `s3://air-quality-medellin-2026/curated/predictions/`
-- Filtra registros donde `estado_predicho = 'PELIGROSO'`
-- Publica mensaje en SNS con: estación, AQI, probabilidad, timestamp
-- IAM Role: LabRole
-- El script base está en `mateo/lambda/lambda_alertas.py`
-
-## Pendiente 2 — Step Functions
-
-Crear State Machine `pipeline-aire-medellin` en Step Functions con esta secuencia:
-
+ 
+**Lambda `lambda_alertas` desplegada:**
+- Trigger: S3 `ObjectCreated` en prefijo `curated/predictions/` con sufijo `.parquet`
+- Lee Parquet con `pyarrow` (layer `AWSSDKPandas-Python311`)
+- Filtros aplicados:
+  1. `contaminacion_alta_pred = 1.0`
+  2. `probabilidad_alerta ≥ 0.70` (configurable vía env var `PROB_THRESHOLD`)
+  3. `timestamp_parsed` dentro de las últimas 24 horas (configurable vía env var `HOURS_WINDOW`)
+- Publica al SNS topic con resumen formateado en español
+- Runtime: Python 3.11 · Memoria: 256 MB · Timeout: 1 min
+- IAM Role: `LabRole`
+- Decodifica URL-encoded keys de S3 (`station_id%3DMED` → `station_id=MED`)
+**Variables de entorno:**
+ 
+| Clave | Valor |
+|---|---|
+| `SNS_TOPIC_ARN` | `arn:aws:sns:us-east-1:501105294149:air-quality-alerts` |
+| `PROB_THRESHOLD` | `0.70` |
+| `HOURS_WINDOW` | `24` |
+ 
+Código fuente: `lambda/lambda_alertas.py`
+ 
+---
+ 
+## Step Functions
+ 
+**State Machine `air-quality-pipeline` creada:**
+ 
 ```
 Start
-  → Wait 20s
   → Glue: air-quality-raw-to-curated  (.sync)
-  → Wait 20s
   → Glue: air-quality-build-features  (.sync)
-  → Wait 20s
   → Glue: air-quality-ml-training     (.sync)
-  → Wait 20s
-  → Lambda: lambda-air-quality-alertas
   → End
 ```
-
-La definición JSON está en `step_functions/pipeline_state_machine.json`.
-
-## Pendiente 3 — EventBridge (trigger horario)
-
-Crear regla en EventBridge:
-
+ 
+- Tipo: Estándar
+- IAM Role: `LabRole`
+- Logging: deshabilitado (ahorro de costos)
+- Probada end-to-end: los 3 jobs corren en secuencia, dispara la Lambda automáticamente vía S3 trigger al generar nuevas predicciones
+Definición JSON: `step_functions/pipeline_state_machine.json`
+ 
+---
+ 
+## EventBridge (trigger horario)
+ 
+**Regla `air-quality-pipeline-trigger` creada:**
+ 
 ```
-Nombre: trigger-pipeline-aire-horario
-Schedule: rate(1 hour)
-Target: Step Functions → pipeline-aire-medellin
-IAM Role: LabRole
+Nombre:    air-quality-pipeline-trigger
+Schedule:  rate(2 hours)
+Target:    Step Functions → air-quality-pipeline
+IAM Role:  LabRole
+Estado:    Habilitada
 ```
-
-La configuración JSON está en `mateo/eventbridge/regla_eventbridge.json`.
-
-## Pendiente 4 — Dashboard QuickSight
-
-Conectar QuickSight a Athena y construir 4 paneles:
-
-| Panel                                | Fuente                               | Tipo             |
-| ------------------------------------ | ------------------------------------ | ---------------- |
-| Serie de tiempo AQI por hora         | `air_quality_db.clean`             | Line chart       |
-| Mapa de estaciones por nivel AQI     | `air_quality_db.clean`             | Mapa con colores |
-| KPI gauge AQI máximo actual         | `air_quality_db.clean`             | KPI / Gauge      |
-| Tabla predicciones / alertas activas | `curated/predictions/` vía Athena | Table            |
-
-Ver instrucciones detalladas en `mateo/quicksight/README_quicksight.md`.
-
-## Pendiente 5 — Diagrama de arquitectura
-
-Crear en draw.io el diagrama completo del pipeline (ver sección Arquitectura de este README como referencia).
-
-## Pendiente 6 — Presentación
-
-10 slides + guion de demo en vivo:
-
+ 
+> Se eligió ventana de 2 horas en lugar de 1 hora para reducir costos de Glue ~50% sin afectar la utilidad de las alertas (la calidad del aire no cambia drásticamente cada hora).
+ 
+Configuración: `eventbridge/regla_eventbridge.json`
+ 
+---
+ 
+## Dashboard (Streamlit)
+ 
+> **Nota:** QuickSight no estaba disponible en la cuenta AWS Academy (`voclabs/LabRole` no tiene permisos `quicksight:*`). Se optó por **Streamlit + Plotly** desplegado localmente, manteniendo el flujo de datos vía Athena → CSV.
+ 
+**Dashboard `dashboard.py` construido con:**
+- Streamlit (framework web)
+- Plotly Express (gráficos interactivos)
+- Pandas (procesamiento)
+**Paneles incluidos:**
+ 
+| Panel | Tipo | Fuente |
+|---|---|---|
+| 4 KPIs (AQI máx, AQI promedio, PM2.5 máx, % lecturas peligrosas) | Métricas | `air_quality_db.clean` |
+| Serie de tiempo del AQI con umbral peligroso | Line chart | `air_quality_db.clean` |
+| Mapa interactivo de estaciones | Scatter mapbox | `air_quality_db.clean` |
+| Distribución por categoría AQI | Bar chart horizontal | `air_quality_db.clean` |
+| Top 10 peores lecturas | Tabla | `air_quality_db.clean` |
+ 
+**Filtros interactivos:** estaciones (multi-select) y rango de fechas.
+ 
+**Cómo correrlo:**
+```bash
+pip install streamlit pandas plotly
+streamlit run dashboard.py
+```
+Se abre automáticamente en `http://localhost:8501`.
+ 
+**Datos:** se exportan vía Athena con la query `dashboard/query_export.sql` a CSV y se cargan al dashboard.
+ 
+Código fuente: `dashboard/dashboard.py`
+ 
+---
+ 
+## ⏳ Pendiente 5 — Diagrama de arquitectura
+ 
+Pendiente: crear el diagrama completo del pipeline. Se hará en Mermaid (renderiza en GitHub) y se exportará a PNG para la presentación.
+ 
+---
+ 
+## ⏳ Pendiente 6 — Presentación
+ 
+Pendiente: 10 slides + guion de demo en vivo.
+ 
 1. Contexto problema calidad del aire Valle de Aburrá
 2. Arquitectura AWS completa
 3. Ingesta: Lambda + Kinesis + Firehose
@@ -373,6 +420,6 @@ Crear en draw.io el diagrama completo del pipeline (ver sección Arquitectura de
 5. Feature Engineering: Glue Job 2
 6. Modelo ML: resultados AUC-ROC 0.857, Accuracy 76%, F1 0.757
 7. Orquestación: Step Functions + EventBridge
-8. Dashboard QuickSight (demo en vivo)
+8. Dashboard Streamlit (demo en vivo)
 9. Alertas SNS (demo disparo de email)
 10. Conclusiones y trabajo futuro
