@@ -1,25 +1,29 @@
 {
-  "Comment": "State Machine for Air Quality Data Processing",
-  "StartAt": "IngestWeatherData",
+  "Comment": "Pipeline Calidad del Aire - orquesta los 3 Glue Jobs en secuencia. Si alguno falla, la maquina termina con error.",
+  "StartAt": "RawToCurated",
   "States": {
-    "IngestWeatherData": {
+    "RawToCurated": {
       "Type": "Task",
-      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:lambda_ingestor",
-      "Next": "TransformRawData"
-    },
-    "TransformRawData": {
-      "Type": "Task",
-      "Resource": "arn:aws:glue:REGION:ACCOUNT_ID:job/job1_raw_to_curated",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "air-quality-raw-to-curated"
+      },
       "Next": "BuildFeatures"
     },
     "BuildFeatures": {
       "Type": "Task",
-      "Resource": "arn:aws:glue:REGION:ACCOUNT_ID:job/job2_build_features",
-      "Next": "TrainModel"
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "air-quality-build-features"
+      },
+      "Next": "MLTraining"
     },
-    "TrainModel": {
+    "MLTraining": {
       "Type": "Task",
-      "Resource": "arn:aws:glue:REGION:ACCOUNT_ID:job/job3_ml_training",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "air-quality-ml-training"
+      },
       "End": true
     }
   }
