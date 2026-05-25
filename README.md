@@ -291,14 +291,8 @@ LIMIT 10;
 ---
 
 ---
-
-# 📋 Pendientes para Mateo
  
-> Estado actualizado: lo entregable por Mateo está **completado** salvo el diagrama de arquitectura y la presentación final.
- 
----
- 
-## ✅ Pendiente 1 — SNS Topic + Lambda de alertas
+## SNS Topic + Lambda de alertas
  
 **SNS Topic creado:**
 ```
@@ -411,15 +405,3 @@ Pendiente: crear el diagrama completo del pipeline. Se hará en Mermaid (renderi
  
 ## ⏳ Pendiente 6 — Presentación
  
-Pendiente: 10 slides + guion de demo en vivo.
- 
-1. Contexto problema calidad del aire Valle de Aburrá
-2. Arquitectura AWS completa
-3. Ingesta: Lambda + Kinesis + Firehose
-4. ETL: Glue Job 1 raw→curated
-5. Feature Engineering: Glue Job 2
-6. Modelo ML: resultados AUC-ROC 0.857, Accuracy 76%, F1 0.757
-7. Orquestación: Step Functions + EventBridge
-8. Dashboard Streamlit (demo en vivo)
-9. Alertas SNS (demo disparo de email)
-10. Conclusiones y trabajo futuro
