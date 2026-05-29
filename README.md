@@ -10,7 +10,7 @@
 | ---------------- | -------------------------------------------------- | ------------- |
 | **Nico**   | Infraestructura AWS + Ingesta                      | ✅ Completado |
 | **Juanes** | Pipeline Glue + Features + ML                      | ✅ Completado |
-| **Mateo**  | Dashboard QuickSight + Alertas SNS + Orquestación | ✅ Pendiente  |
+| **Mateo**  | Dashboard QuickSight + Alertas SNS + Orquestación | ✅ Completado  |
 
 ---
 
