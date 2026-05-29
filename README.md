@@ -89,6 +89,129 @@ EventBridge (cada hora) ──► Step Functions ──► Jobs 1→2→3→Lamb
 
 ---
 
+
+---
+
+# Implementación por Integrante
+
+## 👨‍💻 Nico — Infraestructura AWS e Ingesta
+
+### Objetivo
+Construir el pipeline de streaming compatible con AWS Academy / Vocareum sin crear usuarios IAM ni roles personalizados.
+
+### Recursos creados
+
+| Servicio | Nombre |
+|----------|---------|
+| S3 Bucket | `air-quality-medellin-2026` |
+| Kinesis Data Stream | `air-quality-stream` |
+| Lambda | `air-quality-ingestor` |
+| EventBridge Scheduler | `air-quality-15min` |
+| CloudWatch Logs | `/aws/lambda/air-quality-ingestor` |
+
+### Flujo implementado
+
+```text
+OpenWeather Air Pollution API
+        ↓
+Lambda air-quality-ingestor
+        ↓
+Kinesis Data Streams
+        ↓
+Kinesis Firehose
+        ↓
+S3 raw/year=YYYY/month=MM/day=DD/
+```
+
+### Restricciones AWS Academy
+
+- No fue posible crear usuarios IAM.
+- No fue posible administrar roles personalizados.
+- Se utilizó exclusivamente `LabRole` y roles generados automáticamente por AWS.
+- La solución fue diseñada para ejecutarse completamente dentro de Vocareum Learner Lab.
+
+### Lambda de ingesta
+
+La Lambda consulta cada 15 minutos la API de contaminación de OpenWeather para múltiples ubicaciones del Valle de Aburrá:
+
+| Estación | Latitud | Longitud |
+|----------|----------|----------|
+| Medellín | 6.2442 | -75.5812 |
+| Bello | 6.3373 | -75.5579 |
+| Envigado | 6.1700 | -75.5870 |
+
+Variables de entorno:
+
+```env
+OPENWEATHER_API_KEY=<api_key>
+KINESIS_STREAM_NAME=air-quality-stream
+```
+
+### EventBridge
+
+Configuración:
+
+```text
+rate(15 minutes)
+```
+
+Target:
+
+```text
+air-quality-ingestor
+```
+
+### Validación realizada
+
+- Lambda ejecutándose correctamente.
+- Datos enviados a Kinesis.
+- Firehose escribiendo JSON en S3.
+- CloudWatch sin errores críticos.
+- Datos llegando automáticamente cada 15 minutos.
+
+---
+
+## 👨‍🔬 Juanes — ETL, Features y Machine Learning
+
+Juanes implementó el pipeline de transformación de datos utilizando AWS Glue, construyendo las capas:
+
+```text
+raw/
+   ↓
+clean/
+   ↓
+features/
+   ↓
+model/
+   ↓
+predictions/
+```
+
+Responsabilidades principales:
+
+- Limpieza y normalización de datos JSON.
+- Conversión JSON → Parquet.
+- Construcción de variables predictivas.
+- Entrenamiento del modelo Spark MLlib.
+- Exportación de predicciones hacia Athena y alertas.
+
+---
+
+## 👨‍💼 Mateo — Alertas, Dashboard y Orquestación
+
+Mateo implementó:
+
+- SNS Topic para alertas.
+- Lambda de alertas.
+- Step Functions.
+- EventBridge de ejecución programada.
+- Dashboard Streamlit.
+- Exportaciones para presentación.
+
+El dashboard consume datos provenientes de Athena y presenta indicadores operacionales y predicciones de contaminación en tiempo real.
+
+---
+
 ## Estructura del Bucket S3
 
 ```
@@ -399,7 +522,8 @@ Código fuente: `dashboard/dashboard.py`
  
 ## ⏳ Pendiente 5 — Diagrama de arquitectura
  
-Pendiente: crear el diagrama completo del pipeline. Se hará en Mermaid (renderiza en GitHub) y se exportará a PNG para la presentación.
+<img width="1600" height="789" alt="image" src="https://github.com/user-attachments/assets/1ca350a7-73d3-42f7-8a89-aacc368921b4" />
+
  
 ---
  
